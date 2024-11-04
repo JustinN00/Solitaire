@@ -13,6 +13,7 @@ class Card:
         self.shown = shown
         self.card_width = 35
         self.card_height = 50
+        self.selected = False
         self.card_rect = pygame.Rect(10, 10, self.card_width, self.card_height)
         if self.suit % 2 == 0:
             self.color = "black"
@@ -20,12 +21,17 @@ class Card:
             self.color = "red"
 
     def draw(self, surface: pygame.surface):
+        #TODO move out of draw method
         border_rect = pygame.rect.Rect(self.card_rect.left, self.card_rect.top, self.card_rect.width, self.card_rect.height)
         border_rect.left -= 1
         border_rect.top -= 1
         border_rect.width += 2
         border_rect.height += 2
-        pygame.draw.rect(surface, "black", border_rect)
+        if self.selected:
+            border_color = "yellow"
+        else:
+            border_color = "black"
+        pygame.draw.rect(surface, border_color, border_rect)
         if self.shown:
             pygame.draw.rect(surface, "white", self.card_rect)
             text = my_font.render(str(self.rank), True, self.color)
@@ -59,8 +65,9 @@ class Column:
                 card.card_height,
             )
             y_offset += 15
-        if self.cards[-1].shown == False:
-            self.cards[-1].shown = True
+        if self.cards:
+            if self.cards[-1].shown == False:
+                self.cards[-1].shown = True
 
 
 class Board:
@@ -105,6 +112,8 @@ class Cursor:
         self.board = board
         self.current_column = 0
         self.cursor_rect = pygame.rect.Rect(1,1,1,1)
+        self.selection = None
+        self.selection_column = None
         self.update_column()
 
     
@@ -119,7 +128,6 @@ class Cursor:
             5,
             )
         
-    
     def move_right(self):
         self.current_column += 1
         if self.current_column > len(self.board.columns) - 1:
@@ -133,4 +141,17 @@ class Cursor:
         self.update_column()
     
     def interact(self):
+        if not self.selection:
+            self.selection = self.board.columns[self.current_column].cards[-1]
+            self.selection_column = self.current_column
+            self.selection.selected = True
+        else:
+            #TODO check if move is valid
+            self.board.columns[self.selection_column].cards.remove(self.selection)
+            self.board.columns[self.current_column].cards.append(self.selection)
+            self.selection.selected = False
+            self.selection = None
+
+    def validate_move(self):
         pass
+
