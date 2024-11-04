@@ -1,39 +1,66 @@
+"""Game Objects for the Solitaire game"""
+
 import pygame
+
+pygame.init()
+my_font = pygame.font.Font(None, 36)
 
 
 class Card:
-    def __init__(self, suit, rank, shown = False):
+    def __init__(self, suit: int, rank: int, shown: bool = False):
         self.suit = suit
         self.rank = rank
         self.shown = shown
         self.card_width = 35
-        self.card_height =50
+        self.card_height = 50
         self.card_rect = pygame.Rect(10, 10, self.card_width, self.card_height)
+        if self.suit % 2 == 0:
+            self.color = "black"
+        else:
+            self.color = "red"
 
     def draw(self, surface: pygame.surface):
+        border_rect = pygame.rect.Rect(self.card_rect.left, self.card_rect.top, self.card_rect.width, self.card_rect.height)
+        border_rect.left -= 1
+        border_rect.top -= 1
+        border_rect.width += 2
+        border_rect.height += 2
+        pygame.draw.rect(surface, "black", border_rect)
         if self.shown:
             pygame.draw.rect(surface, "white", self.card_rect)
+            text = my_font.render(str(self.rank), True, self.color)
+            surface.blit(text, (self.card_rect.x, self.card_rect.y))
         else:
             pygame.draw.rect(surface, "red", self.card_rect)
 
+
 class Column:
-    def __init__(self, x_location, y_location, surface):
+    def __init__(self, x_location: int, y_location: int, surface: pygame.surface):
         self.x_location = x_location
         self.y_location = y_location
         self.surface = surface
         self.cards: list[Card] = []
+        self.empty_rect = pygame.rect.Rect(x_location, y_location, 35, 20)
 
     def draw_column(self):
         y_offset = 0
         self.refresh_column()
+        pygame.draw.rect(self.surface, "yellow", self.empty_rect)
+        
         for card in self.cards:
-            card.card_rect = pygame.Rect(self.x_location, (self.y_location + y_offset), card.card_width, card.card_height)
+            card.card_rect = pygame.Rect(
+                self.x_location,
+                (self.y_location + y_offset),
+                card.card_width,
+                card.card_height,
+            )
             card.draw(self.surface)
-            y_offset += 25
+            y_offset += 15
 
     def refresh_column(self):
         if self.cards[-1].shown == False:
             self.cards[-1].shown = True
+
 
 class Board:
     def __init__(self, surface):
@@ -42,22 +69,23 @@ class Board:
         self.columns: list[Column] = []
         self.create_deck()
         self.setup_columns()
-        
 
     def create_deck(self):
         self.deck = []
-        for i in range(1,53):
-            self.deck.append(Card(i%4, i//13))
+        for i in range(1, 53):
+            self.deck.append(Card(i % 4, i // 13))
 
     def setup_columns(self):
         board_width = self.surface.get_width()
-        border_size = board_width/4
+        border_size = board_width / 4
         columns_area = board_width - (border_size * 2)
-        column_space = columns_area/8
+        column_space = columns_area / 8
 
         for i in range(1, 8):
-            self.columns.append(Column(border_size + (column_space * i),25, self.surface))
-        
+            self.columns.append(
+                Column(border_size + (column_space * i), 25, self.surface)
+            )
+
         count = 1
         for column in self.columns:
             cards = self.deck[-count:]
@@ -70,3 +98,36 @@ class Board:
         for column in self.columns:
             column.draw_column()
 
+class Cursor:
+    def __init__(self, board: Board) -> None:
+        self.board = board
+        self.current_column = 0
+        self.cursor_rect = pygame.rect.Rect(1,1,1,1)
+        self.update_column()
+    
+    def draw_cursor(self):
+        pygame.draw.rect(self.board.surface, "black", self.cursor_rect)
+        
+    def update_column(self):
+        self.cursor_rect = pygame.rect.Rect(
+            self.board.columns[self.current_column].cards[-1].card_rect.left,
+            self.board.columns[self.current_column].cards[-1].card_rect.top,
+            5,
+            5,
+            )
+        
+    
+    def move_right(self):
+        self.current_column += 1
+        if self.current_column > len(self.board.columns) - 1:
+            self.current_column = 0
+        self.update_column()
+    
+    def move_left(self):
+        self.current_column -= 1
+        if self.current_column < 0:
+            self.current_column = len(self.board.columns) - 1
+        self.update_column()
+    
+    def interact(self):
+        pass
