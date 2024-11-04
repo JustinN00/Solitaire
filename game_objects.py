@@ -43,10 +43,14 @@ class Column:
         self.empty_rect = pygame.rect.Rect(x_location, y_location, 35, 20)
 
     def draw_column(self):
-        y_offset = 0
         self.refresh_column()
         pygame.draw.rect(self.surface, "yellow", self.empty_rect)
-        
+        for card in self.cards:
+            card.draw(self.surface)
+            
+
+    def refresh_column(self):
+        y_offset = 0
         for card in self.cards:
             card.card_rect = pygame.Rect(
                 self.x_location,
@@ -54,10 +58,7 @@ class Column:
                 card.card_width,
                 card.card_height,
             )
-            card.draw(self.surface)
             y_offset += 15
-
-    def refresh_column(self):
         if self.cards[-1].shown == False:
             self.cards[-1].shown = True
 
@@ -92,6 +93,7 @@ class Board:
             del self.deck[-count:]
             column.cards += cards
             count += 1
+            column.refresh_column()
 
     def draw_board(self):
         self.surface.fill("green")
@@ -104,6 +106,7 @@ class Cursor:
         self.current_column = 0
         self.cursor_rect = pygame.rect.Rect(1,1,1,1)
         self.update_column()
+
     
     def draw_cursor(self):
         pygame.draw.rect(self.board.surface, "black", self.cursor_rect)
