@@ -90,9 +90,6 @@ class Column:
                 self.cards[-1].shown = True
 
 
-class Deck:
-    def __init__(self):
-        self.cards = []
 
 class Cell:
     def __init__(self, suit: int, x_location, y_location, surface: pygame.Surface):
@@ -100,11 +97,20 @@ class Cell:
         self.x_location = x_location
         self.y_location = y_location
         self.surface = surface
-        self.cards = []
+        self.cards: list[Card] = []
         self.cell_rect = pygame.rect.Rect(x_location, y_location, 35, 50)
 
     def draw_cell(self):
         pygame.draw.rect(self.surface, "yellow", self.cell_rect)
+
+    def draw_cards(self): 
+        for card in self.cards:
+            card.draw(self.surface)
+
+
+class Deck(Cell):
+    def __init__(self):
+        super().__init__()
 
 
 class Board:
@@ -112,15 +118,17 @@ class Board:
         self.surface: pygame.Surface = surface
         self.deck: list[Card] = []
         self.columns: list[Column] = []
-        self.cells: list[Cell] = []
+        self.top_row: list[Cell | Deck] = []
         self.create_deck()
         self.setup_columns()
         self.create_cells()
 
     def create_deck(self) -> None:
-        self.deck = []
         for i in range(1, 53):
             self.deck.append(Card(rank=(i % 13) + 1, suit=(i // 4) + 1))
+
+    def create_top_row(self) -> None:
+        pass
 
     def create_cells(self) -> None:
         for i in range(1,5):
