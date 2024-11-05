@@ -22,6 +22,12 @@ while running:
                 case pygame.K_LEFT:
                     cursor.move_left()
 
+                case pygame.K_UP:
+                    cursor.move_up()
+
+                case pygame.K_DOWN:
+                    cursor.move_down()
+
                 case pygame.K_SPACE:
                     cursor.interact()
 
