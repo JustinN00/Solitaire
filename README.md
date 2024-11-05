@@ -1,4 +1,4 @@
-Controls:
-Left: Left Arrow
-Right: Right Arrow
-Select: Space
+Controls: /n
+Left: Left Arrow /n
+Right: Right Arrow /n
+Select: Space /n
