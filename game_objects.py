@@ -30,8 +30,6 @@ class Card:
         else:
             self.color = "red"
 
-        print(f"suit: {self.suit} /n rank: {self.rank}")
-
     def draw(self, surface: pygame.Surface) -> None:
         # TODO move out of draw method
         border_rect = pygame.rect.Rect(
@@ -103,7 +101,6 @@ class Board:
     def create_deck(self) -> None:
         self.deck = []
         for i in range(1, 53):
-            print(f"count: {i}")
             self.deck.append(Card(rank=(i % 13) + 1, suit=(i // 4) + 1))
 
     def setup_columns(self) -> None:
