@@ -119,15 +119,17 @@ class Board:
         self.deck: list[Card] = []
         self.columns: list[Column] = []
         self.top_row: list[Cell | Deck] = []
+        self.cells = []
         self.create_deck()
         self.setup_columns()
-        self.create_cells()
+        self.create_top_row()
 
     def create_deck(self) -> None:
         for i in range(1, 53):
             self.deck.append(Card(rank=(i % 13) + 1, suit=(i // 4) + 1))
 
     def create_top_row(self) -> None:
+        self.create_cells
         pass
 
     def create_cells(self) -> None:
