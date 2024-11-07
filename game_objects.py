@@ -188,6 +188,14 @@ class Board:
         for cell in self.cells:
             cell.draw_cell()
 
+    def check_win(self) -> None:
+        cards = 0
+        for cell in self.cells:
+            if isinstance(cell, Foundation):
+                cards += len(cell.cards)
+        if cards == 52:
+            print("You win")
+
 
 class Cursor:
     def __init__(self, board: Board) -> None:

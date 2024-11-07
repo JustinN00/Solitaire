@@ -33,6 +33,7 @@ while running:
 
     game_board.draw_board()
     cursor.draw_cursor()
+    game_board.check_win()
     pygame.display.flip()
     clock.tick(60)
 pygame.quit()
