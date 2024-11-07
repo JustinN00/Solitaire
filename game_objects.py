@@ -70,12 +70,12 @@ class Column:
         self.empty_rect = pygame.rect.Rect(x_location, y_location, 35, 50)
 
     def draw_column(self) -> None:
-        self.refresh_column()
+        self.refresh()
         pygame.draw.rect(self.surface, "yellow", self.empty_rect)
         for card in self.cards:
             card.draw(self.surface)
 
-    def refresh_column(self) -> None:
+    def refresh(self) -> None:
         y_offset = 0
         for card in self.cards:
             card.card_rect = pygame.Rect(
@@ -92,16 +92,25 @@ class Column:
 
 
 class Cell:
-    def __init__(self, suit: int, x_location, y_location, surface: pygame.Surface):
-        self.suit = suit
+    def __init__(self, x_location, y_location, surface: pygame.Surface):
         self.x_location = x_location
         self.y_location = y_location
         self.surface = surface
         self.cards: list[Card] = []
         self.cell_rect = pygame.rect.Rect(x_location, y_location, 35, 50)
 
+    def refresh(self):
+        for card in self.cards:
+            card.card_rect = pygame.Rect(
+                self.x_location,
+                self.y_location,
+                card.card_width,
+                card.card_height,
+            )
+
     def draw_cell(self):
         pygame.draw.rect(self.surface, "yellow", self.cell_rect)
+        self.draw_cards()
 
     def draw_cards(self): 
         for card in self.cards:
@@ -109,8 +118,20 @@ class Cell:
 
 
 class Deck(Cell):
-    def __init__(self):
-        super().__init__()
+    def get_cards(self):
+        if self.cards:
+            return self.cards.pop()
+
+
+
+class DrawPile(Cell):
+    pass
+
+
+class Foundation(Cell):
+    def __init__(self, suit, x_location, y_location, surface):
+        super().__init__(x_location, y_location, surface)
+        self.suit = suit
 
 
 class Board:
@@ -129,12 +150,14 @@ class Board:
             self.deck.append(Card(rank=(i % 13) + 1, suit=(i // 4) + 1))
 
     def create_top_row(self) -> None:
-        self.create_cells
-        pass
-
-    def create_cells(self) -> None:
+        self.cells.append(Deck(self.border_size + (self.column_space * 1), 10, self.surface))
+        self.cells.append(DrawPile(self.border_size + (self.column_space * 2), 10, self.surface))
         for i in range(1,5):
-            self.cells.append(Cell(i, self.border_size + (self.column_space * (i + 3)), 10, self.surface))
+            self.cells.append(Foundation(i, self.border_size + (self.column_space * (i + 3)), 10, self.surface))
+
+        self.cells[0].cards = self.deck
+        self.cells[0].refresh()
+
 
     def setup_columns(self) -> None:
         board_width = self.surface.get_width()
@@ -155,7 +178,8 @@ class Board:
             del self.deck[-count:]
             column.cards += cards
             count += 1
-            column.refresh_column()
+            column.refresh()
+
 
     def draw_board(self) -> None:
         self.surface.fill("green")
@@ -169,17 +193,37 @@ class Cursor:
     def __init__(self, board: Board) -> None:
         self.board = board
         self.current_column = 0
+        self.current_upper_column = 0
         self.cursor_rect = pygame.rect.Rect(1, 1, 1, 1)
         self.selection: Card | None = None
         self.selection_column: int | None = None
+        self.selection_column_upper = None
         self.cursor_height: int = -1
+        self.upper = False
         self.update_column()
 
     def draw_cursor(self) -> None:
         pygame.draw.rect(self.board.surface, "black", self.cursor_rect)
 
     def update_column(self) -> None:
-        if self.board.columns[self.current_column].cards:
+        if self.upper:
+            if self.board.cells[self.current_upper_column].cards:
+                self.cursor_rect = pygame.rect.Rect(
+                    self.board.cells[self.current_upper_column].cards[self.cursor_height].card_rect.left,
+                    self.board.cells[self.current_upper_column].cards[self.cursor_height].card_rect.top,
+                    5,
+                    5,
+                )
+            else:
+                self.cursor_rect = pygame.rect.Rect(
+                    self.board.cells[self.current_upper_column].cell_rect.left,
+                    self.board.cells[self.current_upper_column].cell_rect.top,
+                    5,
+                    5,
+                )
+                
+        
+        elif self.board.columns[self.current_column].cards:
             self.cursor_rect = pygame.rect.Rect(
                 self.board.columns[self.current_column].cards[self.cursor_height].card_rect.left,
                 self.board.columns[self.current_column].cards[self.cursor_height].card_rect.top,
@@ -195,17 +239,29 @@ class Cursor:
             )
 
     def move_right(self) -> None:
-        self.current_column += 1
-        self.cursor_height = -1
-        if self.current_column > len(self.board.columns) - 1:
-            self.current_column = 0
+        if self.upper:
+            self.current_upper_column += 1
+            self.cursor_height = -1
+            if self.current_upper_column > len(self.board.cells) -1:
+                self.current_upper_column = 0
+        else:
+            self.current_column += 1
+            self.cursor_height = -1
+            if self.current_column > len(self.board.columns) - 1:
+                self.current_column = 0
         self.update_column()
 
     def move_left(self) -> None:
-        self.current_column -= 1
-        self.cursor_height = -1
-        if self.current_column < 0:
-            self.current_column = len(self.board.columns) - 1
+        if self.upper:
+            self.current_upper_column -= 1
+            self.cursor_height = -1
+            if self.current_upper_column < 0:
+                self.current_upper_column = len(self.board.cells) - 1
+        else:
+            self.current_column -= 1
+            self.cursor_height = -1
+            if self.current_column < 0:
+                self.current_column = len(self.board.columns) - 1
         self.update_column()
 
     def move_up(self) -> None:
@@ -217,25 +273,93 @@ class Cursor:
     def move_down(self) -> None:
         if (self.cursor_height + 1) <= -1:
             self.cursor_height += 1
-            self.update_column()
+        elif not self.upper:
+            self.upper = True
+        elif self.upper:
+            self.upper = False
+        self.update_column()
 
     def interact(self) -> None:
-        if not self.selection and self.board.columns[self.current_column].cards:
+        def move_cards(self):
+            if self.selection_column is not None:
+                column = self.board.columns[self.selection_column]
+            else:
+                column = self.board.cells[self.selection_column_upper]
+            for i in self.selection:
+                for i in range(len(self.selection)):
+                    column.cards.pop()
+                if self.upper:
+                    self.board.cells[self.current_upper_column].cards += self.selection
+                else:
+                    self.board.columns[self.current_column].cards += self.selection
+                for i in self.selection:
+                    i.selected=False
+                self.selection = None
+                if self.upper:
+                    self.board.cells[self.current_upper_column].refresh()
+                else:
+                    self.board.columns[self.current_column].refresh()
+            self.update_column()
+            self.selection_column = None
+            self.selection_column_upper = None
+
+        if self.upper:
+            cell = self.board.cells[self.current_upper_column]
+            #Interacting with Deck
+            if isinstance(cell, Deck):
+                if cell.cards:
+                    flipped_card = cell.get_cards()
+                    flipped_card.shown = True
+                    self.board.cells[1].cards.append(flipped_card)
+                else:
+                    if self.board.cells[1].cards:
+                        for i in self.board.cells[1].cards:
+                            i.shown = False
+                        cell.cards += self.board.cells[1].cards
+                        cell.cards.reverse()
+                        self.board.cells[1].cards = []
+                if self.selection:
+                    for i in self.selection:
+                        i.selected=False
+                self.selection = None
+                self.selection_column = None
+                self.selection_column_upper = None
+                cell.refresh()
+                self.board.cells[1].refresh()
+                return
+            
+            #Interacting with DrawPile
+            if isinstance(cell, DrawPile):
+                if self.selection:
+                    for i in self.selection:
+                        i.selected=False
+                self.selection = None
+                self.selection_column = None
+                self.selection_column_upper = None
+                if cell.cards:
+                    self.selection = cell.cards[-1:]
+                    self.selection_column_upper = self.current_upper_column
+                    for i in self.selection:
+                        i.selected = True
+
+            elif not self.selection and cell.cards:
+                if isinstance(cell, Foundation):
+                    self.selection = cell.cards[-1:]
+                    self.selection_column_upper = self.current_upper_column
+                    for i in self.selection:
+                        i.selected = True
+            elif self.selection:
+                if self.validate_move():
+                    move_cards(self)
+        elif not self.selection and self.board.columns[self.current_column].cards:
             if self.validate_select():
                 self.selection = self.board.columns[self.current_column].cards[self.cursor_height:]
                 self.selection_column = self.current_column
                 for i in self.selection:
                     i.selected = True
-        elif self.selection and self.selection_column is not None:
+        elif self.selection and (self.selection_column is not None or self.selection_column_upper is not None):
             if self.validate_move():
-                for i in range(len(self.selection)):
-                    self.board.columns[self.selection_column].cards.pop()
-                self.board.columns[self.current_column].cards += self.selection
-                for i in self.selection:
-                    i.selected = False
-                self.selection = None
-                self.board.columns[self.current_column].refresh_column()
-                self.update_column()
+                move_cards(self)
         
 
     def validate_move(self) -> None:
