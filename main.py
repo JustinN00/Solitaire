@@ -15,7 +15,7 @@ esc_text = my_font.render("ESC: Quit", True, "black")
 arrow_text = my_font.render("Arrows: Move", True, "black")
 space_text = my_font.render("Space: Select", True, "black")
 
-won = True
+won = False
 running = True
 while running:
     for event in pygame.event.get():
