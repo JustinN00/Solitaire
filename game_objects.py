@@ -154,6 +154,16 @@ class Board:
         self.setup_columns()
         self.create_top_row()
 
+    def new_game(self):
+        self.deck = []
+        self.columns = []
+        self.top_row = []
+        self.cells = []
+        self.create_deck()
+        self.setup_columns()
+        self.create_top_row()
+
+
     def refresh_all(self):
         for cell in self.cells:
             cell.refresh()
