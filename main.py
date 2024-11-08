@@ -27,13 +27,16 @@ while running:
 
                 case pygame.K_DOWN:
                     cursor.move_down()
-
+ 
                 case pygame.K_SPACE:
                     cursor.interact()
 
+    game_board.refresh_all()
     game_board.draw_board()
     cursor.draw_cursor()
-    game_board.check_win()
+    if game_board.check_win():
+        print("You win")
+
     pygame.display.flip()
     clock.tick(60)
 pygame.quit()

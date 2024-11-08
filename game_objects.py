@@ -1,6 +1,7 @@
 """Game Objects for the Solitaire game"""
 
 import pygame
+import random
 
 pygame.init()
 my_font = pygame.font.Font(None, 36)
@@ -10,6 +11,12 @@ rank_icon_dict = {
     11: "J",
     12: "Q",
     13: "K",
+}
+suit_icon_dict = {
+    1: "D",
+    2:"C",
+    3:"H",
+    4:"S"
 }
 
 
@@ -31,7 +38,6 @@ class Card:
             self.color = "red"
 
     def draw(self, surface: pygame.Surface) -> None:
-        # TODO move out of draw method
         border_rect = pygame.rect.Rect(
             self.card_rect.left,
             self.card_rect.top,
@@ -51,6 +57,8 @@ class Card:
             pygame.draw.rect(surface, "white", self.card_rect)
             text = my_font.render(str(self.rank_icon), True, self.color)
             surface.blit(text, (self.card_rect.x, self.card_rect.y))
+            text = my_font.render(self.suit_icon, True, self.color)
+            surface.blit(text,(self.card_rect.centerx, self.card_rect.centery))
         else:
             pygame.draw.rect(surface, "red", self.card_rect)
 
@@ -59,6 +67,8 @@ class Card:
             self.rank_icon = rank_icon_dict[self.rank]
         else:
             self.rank_icon = str(self.rank)
+
+        self.suit_icon = suit_icon_dict[self.suit]
 
 
 class Column:
@@ -88,7 +98,6 @@ class Column:
         if self.cards:
             if self.cards[-1].shown == False:
                 self.cards[-1].shown = True
-
 
 
 class Cell:
@@ -145,9 +154,20 @@ class Board:
         self.setup_columns()
         self.create_top_row()
 
+    def refresh_all(self):
+        for cell in self.cells:
+            cell.refresh()
+        for column in self.columns:
+            column.refresh()
+
+
     def create_deck(self) -> None:
-        for i in range(1, 53):
-            self.deck.append(Card(rank=(i % 13) + 1, suit=(i // 4) + 1))
+        suits = [1, 2, 3, 4]
+        for suit in suits:
+            for rank in range(1, 14):
+                self.deck.append(Card(rank=rank, suit=suit))
+        random.shuffle(self.deck)
+
 
     def create_top_row(self) -> None:
         self.cells.append(Deck(self.border_size + (self.column_space * 1), 10, self.surface))
@@ -194,7 +214,9 @@ class Board:
             if isinstance(cell, Foundation):
                 cards += len(cell.cards)
         if cards == 52:
-            print("You win")
+            return True
+        else:
+            return False
 
 
 class Cursor:
@@ -217,8 +239,8 @@ class Cursor:
         if self.upper:
             if self.board.cells[self.current_upper_column].cards:
                 self.cursor_rect = pygame.rect.Rect(
-                    self.board.cells[self.current_upper_column].cards[self.cursor_height].card_rect.left,
-                    self.board.cells[self.current_upper_column].cards[self.cursor_height].card_rect.top,
+                    self.board.cells[self.current_upper_column].cards[-1].card_rect.left,
+                    self.board.cells[self.current_upper_column].cards[-1].card_rect.top,
                     5,
                     5,
                 )
@@ -276,12 +298,23 @@ class Cursor:
         if abs(self.cursor_height - 1) <= len(self.board.columns[self.current_column].cards) \
         and self.board.columns[self.current_column].cards[self.cursor_height -1].shown == True:
             self.cursor_height -= 1
-            self.update_column()
+        elif not self.upper:
+            if self.selection:
+                if len(self.selection) > 1:
+                    return
+            self.upper = True
+        elif self.upper:
+            self.upper = False
+        self.update_column()
+        
 
     def move_down(self) -> None:
         if (self.cursor_height + 1) <= -1:
             self.cursor_height += 1
         elif not self.upper:
+            if self.selection:
+                if len(self.selection) > 1:
+                    return
             self.upper = True
         elif self.upper:
             self.upper = False
@@ -293,20 +326,19 @@ class Cursor:
                 column = self.board.columns[self.selection_column]
             else:
                 column = self.board.cells[self.selection_column_upper]
+            for i in range(len(self.selection)):
+                column.cards.pop()
+            if self.upper:
+                self.board.cells[self.current_upper_column].cards += self.selection
+            else:
+                self.board.columns[self.current_column].cards += self.selection
             for i in self.selection:
-                for i in range(len(self.selection)):
-                    column.cards.pop()
-                if self.upper:
-                    self.board.cells[self.current_upper_column].cards += self.selection
-                else:
-                    self.board.columns[self.current_column].cards += self.selection
-                for i in self.selection:
-                    i.selected=False
-                self.selection = None
-                if self.upper:
-                    self.board.cells[self.current_upper_column].refresh()
-                else:
-                    self.board.columns[self.current_column].refresh()
+                i.selected=False
+            self.selection = None
+            if self.upper:
+                self.board.cells[self.current_upper_column].refresh()
+            else:
+                self.board.columns[self.current_column].refresh()
             self.update_column()
             self.selection_column = None
             self.selection_column_upper = None
@@ -357,23 +389,63 @@ class Cursor:
                     for i in self.selection:
                         i.selected = True
             elif self.selection:
-                if self.validate_move():
+                if self.validate_move(self.selection, self.board.cells[self.current_upper_column]):
                     move_cards(self)
         elif not self.selection and self.board.columns[self.current_column].cards:
-            if self.validate_select():
-                self.selection = self.board.columns[self.current_column].cards[self.cursor_height:]
-                self.selection_column = self.current_column
-                for i in self.selection:
-                    i.selected = True
+            self.selection = self.board.columns[self.current_column].cards[self.cursor_height:]
+            self.selection_column = self.current_column
+            for i in self.selection:
+                i.selected = True
         elif self.selection and (self.selection_column is not None or self.selection_column_upper is not None):
-            if self.validate_move():
+            move_spot = self.board.columns[self.current_column] if self.current_column is not None else self.board.cells[self.current_upper_column]
+            if self.validate_move(self.selection, move_spot):
                 move_cards(self)
         
 
-    def validate_move(self) -> None:
-        #TODO
-        return True
+    def deselect(self):
+        for i in self.selection:
+            i.selected = False
+        if self.upper:
+            self.board.cells[self.current_upper_column].refresh()
+        else:
+            self.board.columns[self.current_column].refresh()
+        if self.selection_column:
+            self.board.columns[self.selection_column].refresh()
+        elif self.selection_column_upper:
+            self.board.cells[self.selection_column_upper].refresh()
+        self.selection = None
+        self.selection_column = None
+        self.selection_column_upper = None
 
-    def validate_select(self) -> None:
-        #TODO
-        return True
+        
+
+    def validate_move(self, selected: list[Card], target: Column | Cell):
+        if isinstance(target, Foundation):
+            if len(selected) > 1:
+                return False
+            elif not target.cards:
+                if selected[0].rank == 1:
+                    return True
+                else:
+                    return False
+            elif (selected[0].rank - target.cards[-1].rank) == 1 and selected[0].suit == target.cards[-1].suit:
+                return True
+            else:
+                return False
+
+        elif isinstance(target, Column):
+            if target.cards:
+                if target.cards[-1].rank - selected[0].rank == 1 \
+                 and abs(target.cards[-1].suit % 2 - selected[0].suit % 2) == 1:
+                    return True
+                else:
+                    self.deselect()
+                    return False
+            elif selected[0].rank == 13:
+                return True
+            else:
+                return False
+        else:
+            return False
+
+
