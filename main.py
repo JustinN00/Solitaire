@@ -5,6 +5,8 @@ import game_objects
 
 pygame.init()
 pygame.display.set_caption("Bootleg Solitaire")
+icon = pygame.image.load("icon.png")
+pygame.display.set_icon(icon)
 my_font = pygame.font.Font(None, 36)
 screen = pygame.display.set_mode((1200, 720))
 game_board = game_objects.Board(screen)
